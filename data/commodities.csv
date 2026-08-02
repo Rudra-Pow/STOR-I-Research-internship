@@ -1,0 +1,4 @@
+commodity,unit,unit_purchase_price_usd,unit_space_ft3,transport_cost_usd_per_unit_mile,unmet_demand_penalty_usd,holding_cost_usd
+Water,1000 gallons,647.7,144.6,0.3,6477,161.925
+Food,1000 MREs,5420,83.33,0.04,54200,1355
+Medical kits,1 kit,140,1.16,0.00058,1400,35

@@ -1,0 +1,39 @@
+from_node,to_node,distance_miles,notes
+1,2,165,
+2,3,143,
+3,4,274,
+3,5,197,
+4,5,239,damaged in Hurricane 1 (Table 3)
+4,6,320,
+5,10,90,
+9,11,200,
+10,11,145,
+6,7,137,
+6,9,200,
+7,8,210,
+7,17,210,
+8,12,185,damaged in Hurricane 8 (Table 3)
+8,16,240,
+12,13,90,damaged in Hurricane 9 (Table 3)
+12,14,145,damaged in Hurricane 2 (Table 3)
+14,15,60,damaged in Hurricane 2 (Table 3)
+14,16,250,
+15,24,195,damaged in Hurricanes 2 and 12 (Table 3)
+16,17,190,
+16,18,148,
+17,20,290,damaged in Hurricane 4 (Table 3)
+18,19,216,
+18,20,245,
+18,24,275,
+20,21,200,
+21,22,175,damaged in Hurricanes 4, 7 and 11 (Table 3)
+22,23,108,
+23,26,140,
+24,25,150,
+25,26,70,
+25,27,115,
+26,27,140,
+27,28,85,
+27,29,235,
+28,29,280,
+29,30,160,
