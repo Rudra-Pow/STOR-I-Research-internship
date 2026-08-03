@@ -1,6 +1,6 @@
 import time
-from data_loader import build_scenario_network
-from model import build_master, solve_subproblem
+from .data_loader import build_scenario_network
+from .model import build_master, solve_subproblem
 
 # calculates the percentage between the lower and upper bound / itter
 def gap_trajectory(history):
@@ -39,7 +39,17 @@ def benders(data, node_list, cut_mode="single", tol=1e-4, max_iter=100, verbose=
     t_start = time.time()
     gap = float("inf")
 
-    # subproblem 
+    #build scenario network function for each scenario
+    subproblems = {}
+
+    for s in data.scenarios:
+        scenario_id = s["id"]
+
+        demand, survival, arcs = build_scenario_network(data, s)
+
+        subproblems[scenario_id] = {"demand": demand, "survival": survival, "arcs": arcs}
+
+    # subproblem
     for it in range(1, max_iter + 1):
         t0 = time.time()
         m.optimize()
@@ -52,7 +62,7 @@ def benders(data, node_list, cut_mode="single", tol=1e-4, max_iter=100, verbose=
         t0 = time.time()
         scen_obj, scen_duals = {}, {}
         for s in data.scenarios:
-            demand, survival, arcs = build_scenario_network(data, s)
+            demand, survival, arcs = subproblems[s["id"]]["demand"], subproblems[s["id"]]["survival"], subproblems[s["id"]]["arcs"]
             obj_s, duals_s = solve_subproblem(
                 data, data.commodities, arcs, demand, survival, r_val, node_list,
             )

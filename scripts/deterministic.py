@@ -1,6 +1,6 @@
 import time
 import pulp
-from data_loader import build_scenario_network
+from .data_loader import build_scenario_network
 
 
 def _safe(name):
