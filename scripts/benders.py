@@ -1,6 +1,6 @@
 import time
 from .data_loader import build_scenario_network
-from .model import build_master, solve_subproblem
+from .model import build_master, build_subproblem
 
 # calculates the percentage between the lower and upper bound / itter
 def gap_trajectory(history):
@@ -46,8 +46,9 @@ def benders(data, node_list, cut_mode="single", tol=1e-4, max_iter=100, verbose=
         scenario_id = s["id"]
 
         demand, survival, arcs = build_scenario_network(data, s)
+        sub_m, balance_constr = build_subproblem(data, data.commodities, arcs, demand, survival, node_list)
 
-        subproblems[scenario_id] = {"demand": demand, "survival": survival, "arcs": arcs}
+        subproblems[scenario_id] = {"model": sub_m, "balance_constr": balance_constr, "demand": demand, "survival": survival, "arcs": arcs}
 
     # subproblem
     for it in range(1, max_iter + 1):
@@ -62,12 +63,22 @@ def benders(data, node_list, cut_mode="single", tol=1e-4, max_iter=100, verbose=
         t0 = time.time()
         scen_obj, scen_duals = {}, {}
         for s in data.scenarios:
-            demand, survival, arcs = subproblems[s["id"]]["demand"], subproblems[s["id"]]["survival"], subproblems[s["id"]]["arcs"]
-            obj_s, duals_s = solve_subproblem(
-                data, data.commodities, arcs, demand, survival, r_val, node_list,
-            )
-            scen_obj[s["id"]] = obj_s
-            scen_duals[s["id"]] = duals_s
+            scenario_id = s["id"]
+            sp = subproblems[scenario_id]
+
+            sub_m, balance_constr, demand, survival = sp["model"], sp["balance_constr"], sp["demand"], sp["survival"]
+
+            #RHS Update
+            for i in node_list:
+                for k in data.commodities:
+                    balance_constr[i, k].RHS = (demand[i][k] - survival[i] * r_val.get((i, k), 0.0))
+
+            sub_m.optimize() #relative complete recourse problem
+
+            scen_obj[scenario_id] = sub_m.ObjVal
+            scen_duals[scenario_id] = {(i, k): -survival[i] * balance_constr[i, k].Pi for i in node_list for k in data.commodities}
+            
+
         t_sub = time.time() - t0
 
         expected_recourse = sum(s["probability"] * scen_obj[s["id"]] for s in data.scenarios)
