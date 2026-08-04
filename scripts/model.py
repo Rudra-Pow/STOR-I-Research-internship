@@ -55,7 +55,7 @@ def build_master(data, node_list, cut_mode="single"):
     return m, y, r, theta
 
 # subproblem 
-def solve_subproblem(data, commodities, arcs, demand, survival, r_fixed, node_list):
+def build_subproblem(data, commodities, arcs, demand, survival, node_list):
     m = _quiet_model("subproblem")
     cinfo = data.commodity_info
 
@@ -67,38 +67,30 @@ def solve_subproblem(data, commodities, arcs, demand, survival, r_fixed, node_li
     z = {(i, k): m.addVar(lb=0, name=f"z_{i}_{_safe(k)}") for i in node_list for k in commodities}
     w = {(i, k): m.addVar(lb=0, name=f"w_{i}_{_safe(k)}") for i in node_list for k in commodities}
 
-    # this fixes a value for x, inorder to itter solve mp  
-    rfix = {(i, k): m.addVar(lb=0, name=f"rfix_{i}_{_safe(k)}") for i in node_list for k in commodities}
-
     transport_cost = gp.quicksum(cinfo[k].transport_cost * dist * x[(i, j, k)]for (i, j), dist in arcs.items() for k in commodities)
     holding_cost = gp.quicksum(cinfo[k].holding * z[(i, k)] for i in node_list for k in commodities)
     penalty_cost = gp.quicksum(cinfo[k].penalty * w[(i, k)] for i in node_list for k in commodities)
     m.setObjective(transport_cost + holding_cost + penalty_cost, GRB.MINIMIZE)
- 
-    # fixing constraints give us the Benders cut duals
-    fix_constrs = {
-        (i, k): m.addConstr(rfix[(i, k)] == r_fixed.get((i, k), 0.0), name=f"fix_{i}_{_safe(k)}")
-        for i in node_list for k in commodities
-    }
 
     #creates adjeceny lists, for flow constraint
     in_arcs, out_arcs = {i: [] for i in node_list}, {i: [] for i in node_list}
     for (i, j) in arcs:
         out_arcs[i].append(j)
         in_arcs[j].append(i)
-        
+
+    balance_constr = {}
+    
     # flow conservation logic 
     for i in node_list:
         for k in commodities:
             inflow = gp.quicksum(x[(j, i, k)] for j in in_arcs[i])
             outflow = gp.quicksum(x[(i, j, k)] for j in out_arcs[i])
-            m.addConstr(
-                inflow + survival[i] * rfix[(i, k)] - z[(i, k)]
-                == outflow + demand[i][k] - w[(i, k)],
+            balance_constr[i,k] = m.addConstr(
+                inflow - outflow - z[(i, k)] + w[(i, k)]
+                == demand[i][k], #temporary RHS
                 name=f"flowcons_{i}_{_safe(k)}",
             )
 
-    m.optimize()
+    m.Params.Method = 1
 
-    duals = {(i, k): c.Pi for (i, k), c in fix_constrs.items()}
-    return m.ObjVal, duals
+    return m, balance_constr
